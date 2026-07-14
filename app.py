@@ -170,7 +170,8 @@ class VideoProcessor(VideoProcessorBase):
 
         roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
 
-        gesture, confidence = predict(roi_rgb)
+        gesture = "TEST"
+        confidence = 100
 
         cv2.putText(
             img,
