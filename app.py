@@ -1,37 +1,39 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
-import av
-import cv2
+
 import torch
 import torch.nn as nn
 import numpy as np
+
 from PIL import Image
 from torchvision import transforms
 
-import streamlit
-import streamlit_webrtc
+st.set_page_config(page_title="Live Hand Gesture Recognition")
 
+st.title("Hand Gesture Recognition")
+st.write("Take a picture of your hand gesture.")
 
-st.write("Streamlit:", streamlit.__version__)
-st.write("streamlit-webrtc:", streamlit_webrtc.__version__)
-st.title("Live Hand Gesture Recognition")
-
-st.write("Place your hand inside the green box for prediction.")
+# -----------------------------
+# Labels
+# -----------------------------
 
 gesture_to_label = {
-    "01_palm":0,
-    "02_l":1,
-    "03_fist":2,
-    "04_fist_moved":3,
-    "05_thumb":4,
-    "06_index":5,
-    "07_ok":6,
-    "08_palm_moved":7,
-    "09_c":8,
-    "10_down":9
+    "01_palm": 0,
+    "02_l": 1,
+    "03_fist": 2,
+    "04_fist_moved": 3,
+    "05_thumb": 4,
+    "06_index": 5,
+    "07_ok": 6,
+    "08_palm_moved": 7,
+    "09_c": 8,
+    "10_down": 9
 }
 
-label_to_gesture = {v:k for k,v in gesture_to_label.items()}
+label_to_gesture = {v: k for k, v in gesture_to_label.items()}
+
+# -----------------------------
+# Transform
+# -----------------------------
 
 transform = transforms.Compose([
     transforms.Resize((128,128)),
@@ -42,69 +44,65 @@ transform = transforms.Compose([
     )
 ])
 
+# -----------------------------
+# Device
+# -----------------------------
+
 device = torch.device(
     "cuda" if torch.cuda.is_available()
     else "cpu"
 )
 
-
-
+# -----------------------------
+# CNN
+# -----------------------------
 
 class GestureCNN(nn.Module):
 
     def __init__(self):
-        super(GestureCNN, self).__init__()
+        super().__init__()
 
-        # Block 1
         self.block1 = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.Conv2d(3,32,3,padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
 
-        # Block 2
         self.block2 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.Conv2d(32,64,3,padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
 
-        # Block 3
         self.block3 = nn.Sequential(
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.Conv2d(64,128,3,padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
 
-        # Block 4
         self.block4 = nn.Sequential(
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.Conv2d(128,256,3,padding=1),
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
 
-        # Global Average Pooling
-        self.gap = nn.AdaptiveAvgPool2d((1, 1))
+        self.gap = nn.AdaptiveAvgPool2d((1,1))
 
-        # Classifier
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Dropout(0.4),
-            nn.Linear(256, 10)
+            nn.Linear(256,10)
         )
 
-    def forward(self, x):
+    def forward(self,x):
 
         x = self.block1(x)
-
         x = self.block2(x)
-
         x = self.block3(x)
-
         x = self.block4(x)
 
         x = self.gap(x)
@@ -112,11 +110,15 @@ class GestureCNN(nn.Module):
         x = self.classifier(x)
 
         return x
-    
+
+# -----------------------------
+# Load model
+# -----------------------------
+
 @st.cache_resource
 def load_model():
 
-    model = GestureCNN().to(device)
+    model = GestureCNN()
 
     model.load_state_dict(
         torch.load(
@@ -126,11 +128,16 @@ def load_model():
         )
     )
 
+    model.to(device)
     model.eval()
 
     return model
 
 model = load_model()
+
+# -----------------------------
+# Prediction
+# -----------------------------
 
 def predict(image):
 
@@ -144,81 +151,28 @@ def predict(image):
 
         output = model(image)
 
-        probs = torch.softmax(output,dim=1)
+        probs = torch.softmax(output, dim=1)
 
-        confidence,pred = torch.max(probs,1)
+        confidence, pred = torch.max(probs, 1)
 
     return (
         label_to_gesture[pred.item()],
         confidence.item()*100
     )
-img = np.zeros((300,300,3), dtype=np.uint8)
+uploaded_image = st.camera_input("Capture Hand Gesture")
 
-print(predict(img))
+if uploaded_image is not None:
 
-class VideoProcessor(VideoProcessorBase):
+    image = Image.open(uploaded_image).convert("RGB")
 
-  def recv(self, frame):
+    st.image(
+        image,
+        caption="Captured Image",
+        use_container_width=True
+    )
 
-    img = frame.to_ndarray(format="bgr24")
+    gesture, confidence = predict(np.array(image))
 
-    img = cv2.flip(img, 1)
+    st.success(f"Prediction : {gesture}")
 
-    x1, y1 = 150, 100
-    x2, y2 = 450, 400
-
-    cv2.rectangle(img, (x1, y1), (x2, y2), (0,255,0), 2)
-
-    roi = img[y1:y2, x1:x2]
-
-    try:
-
-        roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
-
-        gesture = "TEST"
-        confidence = 100
-
-        cv2.putText(
-            img,
-            f"{gesture} ({confidence:.2f}%)",
-            (20,40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0,255,0),
-            2
-        )
-
-    except Exception as e:
-
-        cv2.putText(
-            img,
-            str(e),
-            (20,40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (0,0,255),
-            2
-        )
-
-    return av.VideoFrame.from_ndarray(img, format="bgr24")
-
-webrtc_streamer(
-    
-    key="gesture",
-    video_processor_factory=VideoProcessor,
-
-    rtc_configuration={
-    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-    },
-    
-    media_stream_constraints={
-        "video": True,
-        "audio": False
-    },
-    
-    video_html_attrs={
-    "style": {"width": "100%"},
-    "autoPlay": True,
-    "controls": False,
-    }
-)
+    st.info(f"Confidence : {confidence:.2f}%")
