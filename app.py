@@ -8,6 +8,7 @@ import numpy as np
 from PIL import Image
 from torchvision import transforms
 
+import streamlit
 import streamlit_webrtc
 
 
