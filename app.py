@@ -5,10 +5,14 @@ import cv2
 import torch
 import torch.nn as nn
 import numpy as np
-
 from PIL import Image
 from torchvision import transforms
 
+import streamlit_webrtc
+
+
+st.write("Streamlit:", streamlit.__version__)
+st.write("streamlit-webrtc:", streamlit_webrtc.__version__)
 st.title("Live Hand Gesture Recognition")
 
 st.write("Place your hand inside the green box for prediction.")
