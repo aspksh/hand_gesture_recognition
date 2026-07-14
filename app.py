@@ -147,26 +147,26 @@ def predict(image):
         label_to_gesture[pred.item()],
         confidence.item()*100
     )
+img = np.zeros((300,300,3), dtype=np.uint8)
+
+print(predict(img))
 
 class VideoProcessor(VideoProcessorBase):
 
-    def recv(self, frame):
+  def recv(self, frame):
 
-        img = frame.to_ndarray(format="bgr24")
+    img = frame.to_ndarray(format="bgr24")
 
-        # Mirror effect
-        img = cv2.flip(img, 1)
+    img = cv2.flip(img, 1)
 
-        # ROI
-        x1, y1 = 150, 100
-        x2, y2 = 450, 400
+    x1, y1 = 150, 100
+    x2, y2 = 450, 400
 
-        cv2.rectangle(img, (x1, y1), (x2, y2), (0,255,0), 2)
+    cv2.rectangle(img, (x1, y1), (x2, y2), (0,255,0), 2)
 
-        roi = img[y1:y2, x1:x2]
+    roi = img[y1:y2, x1:x2]
 
-        if roi.size == 0:
-            return av.VideoFrame.from_ndarray(img, format="bgr24")
+    try:
 
         roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
 
@@ -182,10 +182,19 @@ class VideoProcessor(VideoProcessorBase):
             2
         )
 
-        return av.VideoFrame.from_ndarray(
+    except Exception as e:
+
+        cv2.putText(
             img,
-            format="bgr24"
+            str(e),
+            (20,40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0,0,255),
+            2
         )
+
+    return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 webrtc_streamer(
     
