@@ -116,7 +116,7 @@ class GestureCNN(nn.Module):
 @st.cache_resource
 def load_model():
 
-    model = GestureCNN()
+    model = GestureCNN().to(device)
 
     model.load_state_dict(
         torch.load(
