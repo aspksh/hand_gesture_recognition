@@ -175,20 +175,20 @@ if uploaded_image is not None:
 
     width, height = image.size
 
-crop_size = min(width, height)
-
-left = (width - crop_size) // 2
-top = (height - crop_size) // 2
-right = left + crop_size
-bottom = top + crop_size
-
-image = image.crop((left, top, right, bottom))
-
-st.image(
-    image,
-    caption="Center Cropped Image",
-    use_container_width=True
-)
+    crop_size = min(width, height)
+    
+    left = (width - crop_size) // 2
+    top = (height - crop_size) // 2
+    right = left + crop_size
+    bottom = top + crop_size
+    
+    image = image.crop((left, top, right, bottom))
+    
+    st.image(
+        image,
+        caption="Center Cropped Image",
+        use_container_width=True
+    )
     gesture, confidence = predict(np.array(image))
 
     st.success(f"Prediction : {gesture}")
