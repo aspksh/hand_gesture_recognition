@@ -165,6 +165,8 @@ if uploaded_image is not None:
 
     image = Image.open(uploaded_image).convert("RGB")
 
+    st.write("Image Size:", image.size)
+    
     st.image(
         image,
         caption="Captured Image",
