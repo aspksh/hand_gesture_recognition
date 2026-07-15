@@ -36,12 +36,10 @@ label_to_gesture = {v: k for k, v in gesture_to_label.items()}
 # -----------------------------
 
 transform = transforms.Compose([
-    transforms.Resize((128,128)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        (0.5,0.5,0.5),
-        (0.5,0.5,0.5)
-    )
+            transforms.Resize((128,128)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,),(0.5,))
+
 ])
 
 # -----------------------------
