@@ -127,8 +127,7 @@ def load_model():
         torch.load(
             MODEL_PATH,
             map_location=device,
-            weights_only=True
-        )
+            )
     )
 
     model.eval()
