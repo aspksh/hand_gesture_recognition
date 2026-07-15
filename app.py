@@ -1,11 +1,12 @@
 import streamlit as st
-
 import torch
 import torch.nn as nn
 import numpy as np
 
 from PIL import Image
 from torchvision import transforms
+import os
+import gdown
 
 st.set_page_config(page_title="Live Hand Gesture Recognition")
 
@@ -58,78 +59,82 @@ device = torch.device(
 class GestureCNN(nn.Module):
 
     def __init__(self):
-        super().__init__()
+        super(GestureCNN, self).__init__()
 
-        self.block1 = nn.Sequential(
-            nn.Conv2d(3,32,3,padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
+        self.conv1 = nn.Conv2d(3, 32, kernel_size = 3, padding = 1)
+        self.relu1 = nn.ReLU()
+        self.pool1 = nn.MaxPool2d(kernel_size = 2, stride = 2)
 
-        self.block2 = nn.Sequential(
-            nn.Conv2d(32,64,3,padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
+        self.conv2 = nn.Conv2d(32, 64, kernel_size = 3, padding = 1)
+        self.relu2 = nn.ReLU()
+        self.pool2 = nn.MaxPool2d(kernel_size = 2, stride = 2)
 
-        self.block3 = nn.Sequential(
-            nn.Conv2d(64,128,3,padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
+        self.conv3 = nn.Conv2d(64, 128, kernel_size = 3, padding = 1)
+        self.relu3 = nn.ReLU()
+        self.pool3 = nn.MaxPool2d(kernel_size = 2, stride = 2)
 
-        self.block4 = nn.Sequential(
-            nn.Conv2d(128,256,3,padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
+        self.flatten = nn.Flatten()
 
-        self.gap = nn.AdaptiveAvgPool2d((1,1))
+        self.fc1 = nn.Linear(128 * 16 * 16, 512)
+        
+        self.relu4 = nn.ReLU()
 
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.4),
-            nn.Linear(256,10)
-        )
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(512,10)
 
-    def forward(self,x):
+    def forward(self, x):
 
-        x = self.block1(x)
-        x = self.block2(x)
-        x = self.block3(x)
-        x = self.block4(x)
+        x = self.conv1(x)
+        x = self.relu1(x)
+        x = self.pool1(x)
 
-        x = self.gap(x)
+        x = self.conv2(x)
+        x = self.relu2(x)
+        x = self.pool2(x)
 
-        x = self.classifier(x)
+        x = self.conv3(x)
+        x = self.relu3(x)
+        x = self.pool3(x)
+
+        x = self.flatten(x)
+
+        x = self.fc1(x)
+        x = self.relu4(x)
+        x = self.dropout(x)
+
+        x = self.fc2(x)
 
         return x
+        
 
 # -----------------------------
 # Load model
 # -----------------------------
 
+MODEL_PATH = "hand_gesture_cnn.pth"
+
 @st.cache_resource
 def load_model():
+
+    # Agar model file present nahi hai to Google Drive se download karo
+    if not os.path.exists(MODEL_PATH):
+        url = "https://drive.google.com/uc?id=1WVV-wdmi2bsGsm1q8t2svx06S-Piqx6M"
+        gdown.download(url, MODEL_PATH, quiet=False)
 
     model = GestureCNN().to(device)
 
     model.load_state_dict(
         torch.load(
-            "hand_gesture_recog_cnn.pth",
+            MODEL_PATH,
             map_location=device,
             weights_only=True
         )
     )
 
-    model.to(device)
     model.eval()
 
     return model
+
 
 model = load_model()
 
